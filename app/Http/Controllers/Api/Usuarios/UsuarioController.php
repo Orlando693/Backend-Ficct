@@ -1,13 +1,13 @@
 <?php
 
-
-namespace App\Http\Controllers\Api\Usuarios;  // 👈 plural, igual que la carpeta
+namespace App\Http\Controllers\Api\Usuarios;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class UsuarioController extends Controller
 {
@@ -55,18 +55,25 @@ class UsuarioController extends Controller
             'password' => ['nullable','string','min:6'],
         ]);
 
+        // Si no enviaste password, el sistema genera una temporal
+        $plain = $data['password'] ?? Str::random(10);
+
         $user = User::create([
             'name'     => $data['nombre'],
             'email'    => $data['correo'],
             'username' => $data['username'] ?? null,
             'phone'    => $data['telefono'] ?? null,
             'role'     => $data['rol'],
-            'status'   => $data['estado'] ?? 'ACTIVO',
-            'password' => Hash::make($data['password'] ?? '12345678'),
-            'must_change_password' => empty($data['password']),
+            'status'   => $data['estado'] ?? 'PENDIENTE',
+            'password' => Hash::make($plain),
+            'must_change_password' => true, // obliga a cambiarla al primer login
         ]);
 
-        return response()->json($user->toFrontend(), 201);
+        $resp = $user->toFrontend();
+        // devolvemos la contraseña generada/establecida para que el CPD pueda copiarla
+        $resp['temp_password'] = $plain;
+
+        return response()->json($resp, 201);
     }
 
     // PUT /api/users/{id}
@@ -93,14 +100,21 @@ class UsuarioController extends Controller
             'status'   => $data['estado'],
         ]);
 
+        $respPassword = null;
         if (!empty($data['password'])) {
             $user->password = Hash::make($data['password']);
-            $user->must_change_password = false;
+            $user->must_change_password = true;
+            $respPassword = $data['password'];
         }
 
         $user->save();
 
-        return response()->json($user->toFrontend());
+        $resp = $user->toFrontend();
+        if ($respPassword) {
+            $resp['temp_password'] = $respPassword;
+        }
+
+        return response()->json($resp);
     }
 
     // PATCH /api/users/{id}/role
@@ -133,8 +147,7 @@ class UsuarioController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
-        $user->delete(); // SoftDeletes
-
+        $user->delete();
         return response()->json(['ok' => true]);
     }
 }
