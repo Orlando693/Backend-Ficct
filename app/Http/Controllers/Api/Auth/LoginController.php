@@ -29,18 +29,17 @@ class LoginController extends Controller
             return response()->json(['message' => 'Cuenta no habilitada.'], 403);
         }
 
-        // abilities según rol (puedes ampliar)
         $abilities = match ($user->role) {
-            'CPD','Decanato' => ['users.manage','*'],
-            'Jefatura'       => ['*'],
-            default          => ['read'],
+            'CPD', 'Decanato' => ['users.manage','*'],
+            'Jefatura'        => ['*'],
+            default           => ['read'],
         };
 
         $token = $user->createToken('auth-token', $abilities)->plainTextToken;
 
         return response()->json([
-            'token' => $token,
-            'user'  => $user->toFrontend(),
+            'token'     => $token,
+            'user'      => $user->toFrontend(),
             'abilities' => $abilities,
         ]);
     }

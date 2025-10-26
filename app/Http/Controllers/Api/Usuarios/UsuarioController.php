@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Http\Controllers\Api\Users;
+
+namespace App\Http\Controllers\Api\Usuarios;  // 👈 plural, igual que la carpeta
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -10,7 +11,7 @@ use Illuminate\Validation\Rule;
 
 class UsuarioController extends Controller
 {
-    // GET /api/users?q=&rol=&estado=
+    // GET /api/users?q=&rol=&estado=&page=
     public function index(Request $request)
     {
         $q      = $request->query('q');
@@ -20,7 +21,6 @@ class UsuarioController extends Controller
         $users = User::query()
             ->when($q, function ($qb) use ($q) {
                 $like = '%' . str_replace('%', '\%', $q) . '%';
-                // ILIKE para PostgreSQL (case-insensitive)
                 $qb->where(function ($qq) use ($like) {
                     $qq->whereRaw('name ILIKE ?', [$like])
                        ->orWhereRaw('email ILIKE ?', [$like])
@@ -46,13 +46,13 @@ class UsuarioController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nombre'   => ['required', 'string', 'max:150'],
-            'correo'   => ['required', 'email', 'max:150', 'unique:users,email'],
-            'username' => ['nullable', 'string', 'max:40', 'unique:users,username'],
-            'telefono' => ['nullable', 'string', 'max:30'],
-            'rol'      => ['required', Rule::in(['Decanato', 'CPD', 'Jefatura', 'Docente'])],
-            'estado'   => ['nullable', Rule::in(['ACTIVO', 'BLOQUEADO', 'PENDIENTE', 'INACTIVO'])],
-            'password' => ['nullable', 'string', 'min:6'],
+            'nombre'   => ['required','string','max:150'],
+            'correo'   => ['required','email','max:150','unique:users,email'],
+            'username' => ['nullable','string','max:40','unique:users,username'],
+            'telefono' => ['nullable','string','max:30'],
+            'rol'      => ['required', Rule::in(['Decanato','CPD','Jefatura','Docente'])],
+            'estado'   => ['nullable', Rule::in(['ACTIVO','BLOQUEADO','PENDIENTE','INACTIVO'])],
+            'password' => ['nullable','string','min:6'],
         ]);
 
         $user = User::create([
@@ -63,7 +63,7 @@ class UsuarioController extends Controller
             'role'     => $data['rol'],
             'status'   => $data['estado'] ?? 'ACTIVO',
             'password' => Hash::make($data['password'] ?? '12345678'),
-            'must_change_password' => empty($data['password']), // true si no se envió password
+            'must_change_password' => empty($data['password']),
         ]);
 
         return response()->json($user->toFrontend(), 201);
@@ -75,13 +75,13 @@ class UsuarioController extends Controller
         $user = User::findOrFail($id);
 
         $data = $request->validate([
-            'nombre'   => ['required', 'string', 'max:150'],
-            'correo'   => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
-            'username' => ['nullable', 'string', 'max:40', Rule::unique('users', 'username')->ignore($user->id)],
-            'telefono' => ['nullable', 'string', 'max:30'],
-            'rol'      => ['required', Rule::in(['Decanato', 'CPD', 'Jefatura', 'Docente'])],
-            'estado'   => ['required', Rule::in(['ACTIVO', 'BLOQUEADO', 'PENDIENTE', 'INACTIVO'])],
-            'password' => ['nullable', 'string', 'min:6'],
+            'nombre'   => ['required','string','max:150'],
+            'correo'   => ['required','email','max:150', Rule::unique('users','email')->ignore($user->id)],
+            'username' => ['nullable','string','max:40', Rule::unique('users','username')->ignore($user->id)],
+            'telefono' => ['nullable','string','max:30'],
+            'rol'      => ['required', Rule::in(['Decanato','CPD','Jefatura','Docente'])],
+            'estado'   => ['required', Rule::in(['ACTIVO','BLOQUEADO','PENDIENTE','INACTIVO'])],
+            'password' => ['nullable','string','min:6'],
         ]);
 
         $user->fill([
@@ -109,7 +109,7 @@ class UsuarioController extends Controller
         $user = User::findOrFail($id);
 
         $data = $request->validate([
-            'rol' => ['required', Rule::in(['Decanato', 'CPD', 'Jefatura', 'Docente'])],
+            'rol' => ['required', Rule::in(['Decanato','CPD','Jefatura','Docente'])],
         ]);
 
         $user->role = $data['rol'];
@@ -133,7 +133,7 @@ class UsuarioController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
-        $user->delete(); // borrado lógico (SoftDeletes en el modelo)
+        $user->delete(); // SoftDeletes
 
         return response()->json(['ok' => true]);
     }

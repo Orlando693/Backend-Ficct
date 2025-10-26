@@ -36,7 +36,7 @@ class User extends Authenticatable
         ];
     }
 
-    // Helper: mapea al shape del frontend
+    // Mapea al shape que espera el frontend
     public function toFrontend(): array
     {
         return [
@@ -45,8 +45,8 @@ class User extends Authenticatable
             'username'  => $this->username,
             'correo'    => $this->email,
             'telefono'  => $this->phone,
-            'rol'       => $this->role,      // "Decanato" | "CPD" | "Jefatura" | "Docente"
-            'estado'    => $this->status,    // "ACTIVO" | "BLOQUEADO" | "PENDIENTE" | "INACTIVO"
+            'rol'       => $this->role,      // Decanato | CPD | Jefatura | Docente
+            'estado'    => $this->status,    // ACTIVO | BLOQUEADO | PENDIENTE | INACTIVO
             'creado'    => optional($this->created_at)->toDateTimeString(),
         ];
     }
