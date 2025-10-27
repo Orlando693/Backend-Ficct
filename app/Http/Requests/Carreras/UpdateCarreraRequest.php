@@ -3,26 +3,23 @@
 namespace App\Http\Requests\Carreras;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateCarreraRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return true; // o tu policy
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
+        $id = $this->route('id');
+
         return [
-            //
+            'nombre' => ['sometimes','required','string','max:150'],
+            'sigla'  => ['sometimes','required','string','max:10', Rule::unique('carreras','sigla')->ignore($id)],
+            'estado' => ['sometimes','required', Rule::in(['ACTIVA','INACTIVA'])],
         ];
     }
 }
