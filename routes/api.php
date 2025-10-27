@@ -5,7 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\MeController;
-use App\Http\Controllers\Api\Usuarios\UsuarioController; // <<--- aquí
+use App\Http\Controllers\Api\Usuarios\UsuarioController;
+use App\Http\Controllers\Api\Reportes\ReporteController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', LoginController::class);
@@ -24,6 +25,13 @@ Route::middleware(['auth:sanctum', 'can:manage-users'])
         Route::patch('/{id}/role', [UsuarioController::class, 'changeRole']);
         Route::patch('/{id}/toggle-block', [UsuarioController::class, 'toggleBlock']);
         Route::delete('/{id}', [UsuarioController::class, 'destroy']);
+    });
+
+Route::middleware(['auth:sanctum'])
+    ->prefix('reportes')
+    ->group(function () {
+        Route::get('/docentes', [ReporteController::class, 'docentes']);
+        Route::post('/generar', [ReporteController::class, 'generar']);
     });
 
 Route::get('/health/ping', fn () => ['ok' => true]);
