@@ -101,7 +101,7 @@ class CarreraController extends Controller
         }
 
         return [
-            'id' => $c->id,
+            'id' => $c->carrera_id,
             'nombre' => $c->nombre,
             'sigla' => $c->sigla,
             'estado' => $c->estado, // 'ACTIVA' | 'INACTIVA'
