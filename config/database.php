@@ -85,19 +85,24 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
+            'database' => env('DB_DATABASE', 'forge'),
+            'username' => env('DB_USERNAME', 'forge'),
             'password' => env('DB_PASSWORD', ''),
-            'charset' => env('DB_CHARSET', 'utf8'),
+            'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            //'sslmode' => 'prefer',
-            //'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'public')),
-            'sslmode' => env('PGSSLMODE', 'prefer'),                         // ← Aiven: require
-            'search_path' => array_map('trim', explode(',', env('DB_SEARCH_PATH', 'public'))),
+
+            // usa tu esquema por defecto
+            'schema' => env('DB_SCHEMA', 'public'),
+            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'public')), // "academia,public"
+
+            // SSL (Aiven) – seguro tanto local como en Railway
+            'sslmode' => env('DB_SSLMODE', env('PGSSLMODE', 'prefer')),
+            'options' => (extension_loaded('pdo_pgsql') && defined('PDO::PGSQL_ATTR_SSLMODE'))
+                ? [PDO::PGSQL_ATTR_SSLMODE => env('DB_SSLMODE', env('PGSSLMODE', 'require'))]
+                : [],
 
         ],
 
