@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\Usuarios\UsuarioController;
 use App\Http\Controllers\Api\Reportes\ReporteController;
 use App\Http\Controllers\Api\Carreras\CarreraController;
+use App\Http\Controllers\Api\Bitacora\BitacoraController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', LoginController::class);
@@ -45,6 +46,16 @@ Route::middleware(['auth:sanctum']) // si tienes policy, puedes añadir: 'can:ma
         Route::patch('/{id}/estado', [CarreraController::class, 'setEstado']); // activar/inactivar
         // (opcional) borrar
         // Route::delete('/{id}', [CarreraController::class, 'destroy']);
+    });
+
+Route::middleware(['auth:sanctum'])
+    ->prefix('bitacora')
+    ->group(function () {
+        Route::get('/',          [BitacoraController::class, 'index']);     // lista (array)
+        Route::post('/',         [BitacoraController::class, 'store']);     // registrar
+        Route::delete('/',       [BitacoraController::class, 'clearAll']);  // limpiar todo (ruta oficial)
+        Route::delete('/clear',  [BitacoraController::class, 'clearAllFallback']); // fallback para tu front
+        Route::delete('/{id}',   [BitacoraController::class, 'destroy']);   // eliminar 1
     });
 
 Route::get('/health/ping', fn () => ['ok' => true]);
