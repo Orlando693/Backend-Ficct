@@ -3,110 +3,75 @@
 namespace App\Http\Controllers\Api\Carreras;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Carreras\StoreCarreraRequest;
-use App\Http\Requests\Carreras\UpdateCarreraRequest;
-use App\Models\Carrera;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Models\Carrera;
 
 class CarreraController extends Controller
 {
-    // GET /api/carreras?with=count
+    // GET /api/carreras
     public function index(Request $request)
     {
-        $withCount = $request->boolean('with') && $request->query('with') === 'count';
+        $q = Carrera::query();
 
-        $query = Carrera::query();
-
-        if ($withCount) {
-            // Si tienes relaciones definidas:
-            $query->withCount(['materias as materias_count', 'grupos as grupos_count']);
+        if ($estado = $request->query('estado')) {
+            $q->where('estado', $estado);
         }
 
-        $rows = $query->orderBy('nombre')->get();
+        // ignoramos "with=count" para evitar errores por vistas/relaciones
+        $items = $q->orderBy('nombre', 'asc')->get();
 
-        $data = $rows->map(fn ($c) => $this->mapRow($c, $withCount))->values();
-
-        return response()->json(['data' => $data]);
+        return response()->json(['data' => $items]);
     }
 
     // GET /api/carreras/{id}
-    public function show($id, Request $request)
+    public function show($id)
     {
-        $withCount = $request->boolean('with') && $request->query('with') === 'count';
-        $c = Carrera::query()->findOrFail($id);
-        return response()->json(['data' => $this->mapRow($c, $withCount)]);
+        return response()->json(Carrera::findOrFail($id));
     }
 
     // POST /api/carreras
-    public function store(StoreCarreraRequest $request)
+    public function store(Request $request)
     {
-        $data = $request->validated();
-
-        $carrera = Carrera::create([
-            'nombre' => $data['nombre'],
-            'sigla'  => mb_strtoupper($data['sigla']),
-            'estado' => $data['estado'] ?? 'ACTIVA',
+        $data = $request->validate([
+            'nombre' => 'required|string|max:120',
+            'sigla'  => 'required|string|max:15|unique:academia.carreras,sigla',
+            'codigo' => 'required|string|max:30|unique:academia.carreras,codigo',
+            'estado' => ['sometimes','string', Rule::in(['ACTIVA','INACTIVA'])],
         ]);
 
-        // Inicialmente contadores a 0
-        return response()->json([
-            'data' => $this->mapRow($carrera, withCount: false),
-        ], 201);
+        $data['estado'] = $data['estado'] ?? 'ACTIVA';
+
+        $c = Carrera::create($data);
+        return response()->json($c, 201);
     }
 
     // PUT /api/carreras/{id}
-    public function update($id, UpdateCarreraRequest $request)
+    public function update(Request $request, $id)
     {
-        $carrera = Carrera::findOrFail($id);
+        $c = Carrera::findOrFail($id);
 
-        $data = $request->validated();
-        if (isset($data['nombre'])) $carrera->nombre = $data['nombre'];
-        if (isset($data['sigla']))  $carrera->sigla  = mb_strtoupper($data['sigla']);
-        if (isset($data['estado'])) $carrera->estado = $data['estado'];
+        $data = $request->validate([
+            'nombre' => 'required|string|max:120',
+            'sigla'  => "required|string|max:15|unique:academia.carreras,sigla,$id,id_carrera",
+            'codigo' => "required|string|max:30|unique:academia.carreras,codigo,$id,id_carrera",
+            'estado' => ['sometimes','string', Rule::in(['ACTIVA','INACTIVA'])],
+        ]);
 
-        $carrera->save();
-
-        return response()->json(['data' => $this->mapRow($carrera, withCount: false)]);
+        $c->update($data);
+        return response()->json($c);
     }
 
     // PATCH /api/carreras/{id}/estado
-    public function setEstado($id, Request $request)
+    public function setEstado(Request $request, $id)
     {
-        $validated = $request->validate([
-            'estado' => ['required', Rule::in(['ACTIVA', 'INACTIVA'])],
+        $c = Carrera::findOrFail($id);
+        $data = $request->validate([
+            'estado' => ['required', Rule::in(['ACTIVA','INACTIVA'])],
         ]);
+        $c->estado = $data['estado'];
+        $c->save();
 
-        $carrera = Carrera::findOrFail($id);
-        $carrera->estado = $validated['estado'];
-        $carrera->save();
-
-        return response()->json(['data' => $this->mapRow($carrera, withCount: false)]);
-    }
-
-    // --- Helpers ---
-
-    private function mapRow(Carrera $c, bool $withCount): array
-    {
-        // si no usas withCount, puedes calcular counts manuales (try/catch por si no hay relaciones)
-        $materias = 0;
-        $grupos   = 0;
-
-        if ($withCount) {
-            $materias = (int) ($c->materias_count ?? 0);
-            $grupos   = (int) ($c->grupos_count ?? 0);
-        } else {
-            try { $materias = method_exists($c, 'materias') ? $c->materias()->count() : 0; } catch (\Throwable $e) {}
-            try { $grupos   = method_exists($c, 'grupos')   ? $c->grupos()->count()   : 0; } catch (\Throwable $e) {}
-        }
-
-        return [
-            'id' => $c->carrera_id,
-            'nombre' => $c->nombre,
-            'sigla' => $c->sigla,
-            'estado' => $c->estado, // 'ACTIVA' | 'INACTIVA'
-            'materiasAsociadas' => $materias,
-            'gruposAsociados'   => $grupos,
-        ];
+        return response()->json($c);
     }
 }
