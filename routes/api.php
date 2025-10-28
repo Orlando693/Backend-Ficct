@@ -58,4 +58,7 @@ Route::middleware(['auth:sanctum'])
         Route::delete('/{id}',   [BitacoraController::class, 'destroy']);   // eliminar 1
     });
 
+Route::options('/{any}', fn() => response()->noContent())
+    ->where('any', '.*');
+
 Route::get('/health/ping', fn () => ['ok' => true]);
