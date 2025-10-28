@@ -15,7 +15,7 @@ return [
     | is explicitly specified when you execute a query / statement.
     |
     */
-
+    'schema' => env('DB_SCHEMA', 'public'),
     'default' => env('DB_CONNECTION', 'sqlite'),
 
     /*

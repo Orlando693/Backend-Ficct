@@ -2,26 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Carrera extends Model
 {
-    protected $table = 'carreras';
+    use HasFactory;
 
-    protected $fillable = [
-        'nombre',
-        'sigla',
-        'estado', // 'ACTIVA' | 'INACTIVA'
-    ];
+    // Tabla totalmente calificada con el esquema
+    protected $table = 'academia.carreras';
 
-    // Relaciones opcionales (si existen en tu BD)
-    public function materias()
-    {
-        return $this->hasMany(Materia::class, 'carrera_id');
-    }
+    // Clave primaria real
+    protected $primaryKey = 'carrera_id';
 
-    public function grupos()
-    {
-        return $this->hasMany(Grupo::class, 'carrera_id');
-    }
+    protected $fillable = ['nombre', 'sigla', 'estado']; // 'ACTIVA' | 'INACTIVA'
 }
