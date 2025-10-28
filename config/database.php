@@ -94,8 +94,11 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'sslmode' => 'prefer',
-            'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'public')),
+            //'sslmode' => 'prefer',
+            //'search_path' => env('DB_SEARCH_PATH', env('DB_SCHEMA', 'public')),
+            'sslmode' => env('PGSSLMODE', 'prefer'),                         // ← Aiven: require
+            'search_path' => array_map('trim', explode(',', env('DB_SEARCH_PATH', 'public'))),
+
         ],
 
         'sqlsrv' => [
@@ -109,6 +112,7 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
+            
             // 'encrypt' => env('DB_ENCRYPT', 'yes'),
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
