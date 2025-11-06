@@ -6,16 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Carrera extends Model
 {
-    // ⚠️ Forzamos esquema + tabla para no depender de search_path:
+    // Esquema explicito para instalaciones sin search_path ajustado.
     protected $table = 'academia.carreras';
 
-    protected $primaryKey = 'id_carrera';
-    public $timestamps = false;
-
-    protected $fillable = ['nombre', 'sigla', 'codigo', 'estado'];
+    protected $fillable = ['nombre', 'sigla', 'estado'];
 
     protected $casts = [
-        'id_carrera' => 'integer',
+        'id' => 'integer',
         'estado' => 'string',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 }

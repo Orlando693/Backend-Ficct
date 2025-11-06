@@ -34,9 +34,11 @@ class CarreraController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nombre' => 'required|string|max:120',
-            'sigla'  => 'required|string|max:15|unique:academia.carreras,sigla',
-            'codigo' => 'required|string|max:30|unique:academia.carreras,codigo',
+            'nombre' => ['required','string','max:120'],
+            'sigla'  => [
+                'required','string','max:15',
+                Rule::unique(Carrera::class,'sigla'),
+            ],
             'estado' => ['sometimes','string', Rule::in(['ACTIVA','INACTIVA'])],
         ]);
 
@@ -52,9 +54,11 @@ class CarreraController extends Controller
         $c = Carrera::findOrFail($id);
 
         $data = $request->validate([
-            'nombre' => 'required|string|max:120',
-            'sigla'  => "required|string|max:15|unique:academia.carreras,sigla,$id,id_carrera",
-            'codigo' => "required|string|max:30|unique:academia.carreras,codigo,$id,id_carrera",
+            'nombre' => ['required','string','max:120'],
+            'sigla'  => [
+                'required','string','max:15',
+                Rule::unique(Carrera::class,'sigla')->ignore($id),
+            ],
             'estado' => ['sometimes','string', Rule::in(['ACTIVA','INACTIVA'])],
         ]);
 

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Carreras;
 
+use App\Models\Carrera;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCarreraRequest extends FormRequest
 {
@@ -12,8 +14,7 @@ class StoreCarreraRequest extends FormRequest
     {
         return [
             'nombre' => ['required','string','max:120'],
-            'sigla'  => ['required','string','max:15','unique:academia.carreras,sigla'],
-            'codigo' => ['required','string','max:30','unique:academia.carreras,codigo'],
+            'sigla'  => ['required','string','max:15', Rule::unique(Carrera::class,'sigla')],
             'estado' => ['nullable','in:ACTIVA,INACTIVA'],
         ];
     }
