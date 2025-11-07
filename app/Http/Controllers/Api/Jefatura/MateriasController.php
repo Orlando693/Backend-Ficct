@@ -46,4 +46,11 @@ class MateriasController extends Controller
         $out = $this->svc->setEstado((int)$id, $req->validated()['estado']);
         return response()->json($out);
     }
+
+    // DELETE /api/materias/{id}
+    public function destroy($id)
+    {
+        $out = $this->svc->delete((int)$id);
+        return response()->json($out);
+    }
 }

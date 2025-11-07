@@ -109,25 +109,17 @@ class MateriaService
     // -------- Cambiar estado con validación de "programación vigente" --------
     public function setEstado(int $id, string $estado): array
     {
+        if ($estado === 'INACTIVA') {
+            $vigentes = $this->countProgramacionVigente($id);
+            if ($vigentes > 0) {
+                abort(422, "No se puede inactivar: programación vigente ({$vigentes}).");
+            }
+        }
+
         return DB::transaction(function () use ($id, $estado) {
             // recuperar código para mensaje/bitácora
             $m = DB::selectOne('SELECT codigo FROM academia.materia WHERE id_materia=?', [$id]);
             if (!$m) abort(404, 'Materia no encontrada.');
-
-            // si intenta INACTIVA, valida que no tenga grupos vigentes
-            if ($estado === 'INACTIVA') {
-                $cnt = DB::selectOne(
-                    "SELECT COUNT(*) AS c
-                       FROM academia.grupo g
-                       JOIN academia.materia_carrera mc ON mc.id_materia_carrera=g.materia_carrera_id
-                       JOIN academia.gestion_academica ga ON ga.id_gestion=g.gestion_id
-                      WHERE mc.materia_id=? AND ga.fecha_fin >= CURRENT_DATE",
-                    [$id]
-                );
-                if (($cnt->c ?? 0) > 0) {
-                    abort(422, "No se puede inactivar: programación vigente ({$cnt->c}).");
-                }
-            }
 
             DB::update('UPDATE academia.materia SET estado=? WHERE id_materia=?', [$estado, $id]);
 
@@ -139,11 +131,56 @@ class MateriaService
         });
     }
 
+    // -------- Eliminar --------
+    public function delete(int $id): array
+    {
+        try {
+            return DB::transaction(function () use ($id) {
+                $m = DB::selectOne('SELECT codigo FROM academia.materia WHERE id_materia=?', [$id]);
+                if (!$m) abort(404, 'Materia no encontrada.');
+
+                DB::delete('DELETE FROM academia.materia WHERE id_materia=?', [$id]);
+
+                @DB::select('SELECT academia.fn_log_bitacora(?, ?, ?, ?, ?, ?, ?, ?)', [
+                    null, 'Jefatura', 'Materias', 'eliminar', 'Materia:'.$m->codigo, 'OK', null, null
+                ]);
+
+                return ['message' => 'Materia eliminada.'];
+            });
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23503') {
+                abort(422, 'No se puede eliminar: existen dependencias asociadas.');
+            }
+            throw $e;
+        }
+    }
+
     // -------- Helper: trae fila desde la vista de resumen --------
     private function findResumen(int $id)
     {
         return DB::table(DB::raw('academia.vw_materia_resumen'))
                  ->where('id_materia', $id)
                  ->first();
+    }
+
+    private function countProgramacionVigente(int $id): int
+    {
+        try {
+            $row = DB::selectOne(
+                "SELECT COUNT(*) AS c
+                   FROM academia.grupo g
+                   JOIN academia.materia_carrera mc ON mc.id_materia_carrera=g.materia_carrera_id
+                   JOIN academia.gestion_academica ga ON ga.id_gestion=g.gestion_id
+                  WHERE mc.materia_id=? AND ga.fecha_fin >= CURRENT_DATE",
+                [$id]
+            );
+            return (int) ($row->c ?? 0);
+        } catch (QueryException $e) {
+            // 42P01 = tablas aún no creadas en entornos locales
+            if ($e->getCode() === '42P01') {
+                return 0;
+            }
+            throw $e;
+        }
     }
 }
