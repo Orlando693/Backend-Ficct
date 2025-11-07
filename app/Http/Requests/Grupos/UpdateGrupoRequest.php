@@ -11,6 +11,8 @@ class UpdateGrupoRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'gestion_id' => ['sometimes','integer','min:1'],
+            'materia_id' => ['sometimes','integer','min:1'],
             'paralelo'   => ['sometimes','string','max:10','regex:/^[A-Za-z0-9\-]+$/'],
             'turno'      => ['sometimes','in:manana,tarde,noche'],
             'capacidad'  => ['sometimes','integer','min:1','max:999'],

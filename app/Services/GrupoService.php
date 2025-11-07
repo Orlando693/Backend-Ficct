@@ -10,105 +10,109 @@ class GrupoService
     public function list(array $q): array
     {
         $page = max(1, (int)($q['page'] ?? 1));
-        $limit = max(1, min(100, (int)($q['limit'] ?? 20)));
-        $offset = ($page - 1) * $limit;
+        $per  = max(1, min(100, (int)($q['limit'] ?? $q['per_page'] ?? 20)));
 
-        $gestionId  = $q['gestion_id'] ?? null;
-        $materiaId  = $q['materia_id'] ?? null;
-        $estado     = $q['estado'] ?? null;
-        $search     = trim((string)($q['search'] ?? ''));
+        $query = DB::table(DB::raw('academia.vw_grupo_resumen as g'));
 
-        $where = [];
-        $params = [];
-
-        if (is_numeric($gestionId)) { $where[] = 'g.gestion_id = ?'; $params[] = (int)$gestionId; }
-        if (is_numeric($materiaId)) { $where[] = 'g.materia_id = ?'; $params[] = (int)$materiaId; }
-        if (in_array($estado, ['ACTIVO','INACTIVO'])) { $where[] = 'g.estado = ?'; $params[] = $estado; }
-        if ($search !== '') {
-            $where[] = '(g.paralelo ILIKE ? OR materia_codigo ILIKE ? OR materia_nombre ILIKE ?)';
-            $params[] = "%$search%"; $params[] = "%$search%"; $params[] = "%$search%";
+        if (is_numeric($q['gestion_id'] ?? null)) {
+            $query->where('g.gestion_id', (int) $q['gestion_id']);
+        }
+        if (is_numeric($q['materia_id'] ?? null)) {
+            $query->where('g.materia_id', (int) $q['materia_id']);
+        }
+        if (in_array($q['estado'] ?? null, ['ACTIVO', 'INACTIVO'], true)) {
+            $query->where('g.estado', $q['estado']);
         }
 
-        $whereSql = $where ? ('WHERE '.implode(' AND ', $where)) : '';
+        $search = trim((string)($q['search'] ?? $q['q'] ?? ''));
+        if ($search !== '') {
+            $query->where(function ($w) use ($search) {
+                $w->where('g.paralelo', 'ILIKE', "%{$search}%")
+                  ->orWhere('g.materia_codigo', 'ILIKE', "%{$search}%")
+                  ->orWhere('g.materia_nombre', 'ILIKE', "%{$search}%");
+            });
+        }
 
-        $total = DB::table(DB::raw('academia.vw_grupo_resumen as g'))
-                    ->whereRaw($where ? implode(' AND ', array_map(fn($x)=>$x, $where)) : 'true', $params)
-                    ->count('*');
+        $total = (clone $query)->count();
 
-        $rows = DB::select("
-            SELECT g.* 
-            FROM academia.vw_grupo_resumen g
-            $whereSql
-            ORDER BY materia_codigo, paralelo
-            LIMIT $limit OFFSET $offset
-        ", $params);
+        $rows = $query->orderByDesc('g.gestion_id')
+            ->orderBy('g.materia_codigo')
+            ->orderBy('g.paralelo')
+            ->offset(($page - 1) * $per)
+            ->limit($per)
+            ->get();
 
         return [
-            'total' => $total,
-            'page'  => $page,
-            'limit' => $limit,
-            'data'  => $rows,
+            'data' => $rows,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $per,
+                'total' => $total,
+            ],
         ];
     }
 
     public function mini(?int $gestionId): array
     {
-        $params = [];
-        $where  = '';
-        if ($gestionId) { $where = 'WHERE g.gestion_id = ?'; $params[] = $gestionId; }
+        $query = DB::table(DB::raw('academia.vw_grupo_resumen as g'))
+            ->select(
+                'g.id_grupo',
+                'g.gestion_id',
+                'g.anio',
+                'g.periodo',
+                'g.paralelo',
+                'g.turno',
+                'g.capacidad',
+                'g.materia_id',
+                'g.materia_label'
+            );
 
-        return DB::select("
-            SELECT
-              g.id_grupo,
-              g.paralelo,
-              g.turno,
-              g.capacidad,
-              g.materia_id,
-              g.materia_label
-            FROM academia.vw_grupo_resumen g
-            $where
-            ORDER BY materia_label, paralelo
-        ", $params);
+        if ($gestionId) {
+            $query->where('g.gestion_id', $gestionId);
+        }
+
+        return $query->orderBy('g.materia_label')
+            ->orderBy('g.paralelo')
+            ->get()
+            ->toArray();
     }
 
     public function create(array $in): array
     {
         $personaId = optional(Auth::user())->id_persona ?? null;
 
-        // Duplicidad (gestion+materia+paralelo)
-        $dup = DB::selectOne("
-            SELECT 1
-            FROM academia.grupo
-            WHERE gestion_id = ? AND materia_id = ?
-              AND UPPER(TRIM(paralelo)) = UPPER(TRIM(?))
-            LIMIT 1
-        ", [ $in['gestion_id'], $in['materia_id'], $in['paralelo'] ]);
+        $dup = DB::selectOne(
+            "SELECT 1 FROM academia.grupo
+             WHERE gestion_id = ? AND materia_id = ?
+               AND UPPER(TRIM(paralelo)) = UPPER(TRIM(?))
+             LIMIT 1",
+            [$in['gestion_id'], $in['materia_id'], $in['paralelo']]
+        );
 
         if ($dup) {
-            throw new \RuntimeException('Ya existe un grupo con ese paralelo para esa materia en la gestión.');
+            abort(422, 'Ya existe un grupo con ese paralelo en la gestion seleccionada.');
         }
 
-        return DB::transaction(function() use ($in, $personaId) {
+        return DB::transaction(function () use ($in, $personaId) {
+            $row = DB::selectOne(
+                "INSERT INTO academia.grupo(gestion_id, materia_id, paralelo, turno, capacidad)
+                 VALUES (?,?,?,?,?) RETURNING id_grupo",
+                [$in['gestion_id'], $in['materia_id'], $in['paralelo'], $in['turno'], $in['capacidad']]
+            );
 
-            $row = DB::selectOne("
-                INSERT INTO academia.grupo(gestion_id, materia_id, paralelo, turno, capacidad)
-                VALUES (?,?,?,?,?)
-                RETURNING id_grupo
-            ", [ $in['gestion_id'], $in['materia_id'], $in['paralelo'], $in['turno'], $in['capacidad'] ]);
+            $id = (int) $row->id_grupo;
 
-            $id = (int)$row->id_grupo;
+            DB::select(
+                "SELECT academia.fn_log_bitacora(?, 'Jefatura', 'Grupos', 'crear', ?, 'OK', ?, ?)",
+                [
+                    $personaId,
+                    "Grupo:$id",
+                    'Crear grupo',
+                    json_encode($in, JSON_UNESCAPED_UNICODE),
+                ]
+            );
 
-            // Bitácora
-            DB::select("
-                SELECT academia.fn_log_bitacora(?, 'Jefatura', 'Grupos', 'crear', ?, 'OK', ?, ?)
-            ", [
-                $personaId,
-                "Grupo:$id",
-                'Crear grupo',
-                json_encode($in, JSON_UNESCAPED_UNICODE),
-            ]);
-
-            return [ 'id_grupo' => $id ];
+            return ['data' => $this->findResumen($id)];
         });
     }
 
@@ -116,40 +120,59 @@ class GrupoService
     {
         $personaId = optional(Auth::user())->id_persona ?? null;
 
-        if (isset($in['paralelo'])) {
-            $dup = DB::selectOne("
-                SELECT 1
-                FROM academia.grupo
-                WHERE UPPER(TRIM(paralelo)) = UPPER(TRIM(?))
-                  AND id_grupo <> ?
-            ", [ $in['paralelo'], $id ]);
-            if ($dup) {
-                throw new \RuntimeException('Paralelo duplicado para otro grupo.');
+        $curr = DB::selectOne("SELECT gestion_id, materia_id, paralelo FROM academia.grupo WHERE id_grupo = ?", [$id]);
+        if (!$curr) {
+            abort(404, 'Grupo no encontrado.');
+        }
+
+        $targetGestion = (int) ($in['gestion_id'] ?? $curr->gestion_id);
+        $targetMateria = (int) ($in['materia_id'] ?? $curr->materia_id);
+        $targetParalelo = $in['paralelo'] ?? $curr->paralelo;
+
+        $dup = DB::selectOne(
+            "SELECT 1 FROM academia.grupo
+             WHERE gestion_id = ? AND materia_id = ?
+               AND UPPER(TRIM(paralelo)) = UPPER(TRIM(?))
+               AND id_grupo <> ?",
+            [$targetGestion, $targetMateria, $targetParalelo, $id]
+        );
+        if ($dup) {
+            abort(422, 'Ya existe otro grupo con esos datos.');
+        }
+
+        $allowed = ['gestion_id', 'materia_id', 'paralelo', 'turno', 'capacidad', 'estado'];
+        $sets = [];
+        $vals = [];
+        foreach ($allowed as $field) {
+            if (array_key_exists($field, $in)) {
+                $sets[] = "{$field} = ?";
+                $vals[] = $in[$field];
             }
         }
 
-        $sets = [];
-        $vals = [];
-        foreach (['paralelo','turno','capacidad','estado'] as $k) {
-            if (array_key_exists($k, $in)) { $sets[] = "$k = ?"; $vals[] = $in[$k]; }
+        if (!$sets) {
+            return ['data' => $this->findResumen($id)];
         }
-        if (!$sets) return ['updated'=>0];
 
         $vals[] = $id;
 
-        return DB::transaction(function() use ($sets, $vals, $id, $personaId, $in) {
-            DB::update("UPDATE academia.grupo SET ".implode(', ', $sets)." WHERE id_grupo = ?", $vals);
+        return DB::transaction(function () use ($sets, $vals, $id, $personaId, $in) {
+            $updated = DB::update(
+                "UPDATE academia.grupo SET " . implode(', ', $sets) . " WHERE id_grupo = ?",
+                $vals
+            );
 
-            DB::select("
-                SELECT academia.fn_log_bitacora(?, 'Jefatura', 'Grupos', 'editar', ?, 'OK', ?, ?)
-            ", [
-                $personaId,
-                "Grupo:$id",
-                'Editar grupo',
-                json_encode($in, JSON_UNESCAPED_UNICODE),
-            ]);
+            DB::select(
+                "SELECT academia.fn_log_bitacora(?, 'Jefatura', 'Grupos', 'editar', ?, 'OK', ?, ?)",
+                [
+                    $personaId,
+                    "Grupo:$id",
+                    'Editar grupo',
+                    json_encode($in, JSON_UNESCAPED_UNICODE),
+                ]
+            );
 
-            return ['updated'=>1];
+            return ['data' => $this->findResumen($id)];
         });
     }
 
@@ -158,35 +181,45 @@ class GrupoService
         $personaId = optional(Auth::user())->id_persona ?? null;
 
         $curr = DB::selectOne("SELECT estado FROM academia.grupo WHERE id_grupo = ?", [$id]);
-        if (!$curr) throw new \RuntimeException('Grupo no encontrado.');
+        if (!$curr) {
+            abort(404, 'Grupo no encontrado.');
+        }
 
         $to = $curr->estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
 
-        // Regla: si voy a INACTIVO, validar que no tenga programación vigente
         if ($to === 'INACTIVO') {
-            $check = DB::selectOne("
-                SELECT CASE
-                   WHEN to_regclass('academia.horario') IS NULL THEN false
-                   ELSE EXISTS(SELECT 1 FROM academia.horario WHERE grupo_id = ?)
-                END AS hay
-            ", [$id]);
+            $check = DB::selectOne(
+                "SELECT CASE
+                    WHEN to_regclass('academia.horario') IS NULL THEN false
+                    ELSE EXISTS(SELECT 1 FROM academia.horario WHERE grupo_id = ?)
+                END AS hay",
+                [$id]
+            );
             if ($check && ($check->hay === true || $check->hay === 't')) {
-                throw new \RuntimeException('Rechazado: el grupo tiene horarios programados.');
+                abort(422, 'Rechazado: el grupo tiene horarios programados.');
             }
         }
 
-        DB::transaction(function() use ($id, $to, $personaId) {
+        DB::transaction(function () use ($id, $to, $personaId) {
             DB::update("UPDATE academia.grupo SET estado = ? WHERE id_grupo = ?", [$to, $id]);
-            DB::select("
-                SELECT academia.fn_log_bitacora(?, 'Jefatura', 'Grupos', 'estado', ?, 'OK', ?, ?)
-            ", [
-                $personaId,
-                "Grupo:$id",
-                "Cambiar estado a $to",
-                json_encode(['id_grupo'=>$id,'estado'=>$to], JSON_UNESCAPED_UNICODE),
-            ]);
+            DB::select(
+                "SELECT academia.fn_log_bitacora(?, 'Jefatura', 'Grupos', 'estado', ?, 'OK', ?, ?)",
+                [
+                    $personaId,
+                    "Grupo:$id",
+                    "Cambiar estado a $to",
+                    json_encode(['id_grupo' => $id, 'estado' => $to], JSON_UNESCAPED_UNICODE),
+                ]
+            );
         });
 
-        return ['estado'=>$to];
+        return ['data' => $this->findResumen($id)];
+    }
+
+    private function findResumen(int $id)
+    {
+        return DB::table(DB::raw('academia.vw_grupo_resumen'))
+            ->where('id_grupo', $id)
+            ->first();
     }
 }

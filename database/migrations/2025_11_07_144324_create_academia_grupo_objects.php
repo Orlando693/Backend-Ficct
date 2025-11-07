@@ -11,6 +11,24 @@ return new class extends Migration
         -- 1) Esquema
         CREATE SCHEMA IF NOT EXISTS academia;
 
+        -- 0) Catálogo básico de gestiones académicas
+        CREATE TABLE IF NOT EXISTS academia.gestion_academica (
+          id_gestion   BIGSERIAL PRIMARY KEY,
+          anio         SMALLINT NOT NULL,
+          periodo      SMALLINT NOT NULL CHECK (periodo BETWEEN 1 AND 3),
+          fecha_inicio DATE,
+          fecha_fin    DATE,
+          estado       VARCHAR(12) NOT NULL DEFAULT 'ABIERTA' CHECK (estado IN ('ABIERTA','CERRADA')),
+          UNIQUE (anio, periodo)
+        );
+
+        INSERT INTO academia.gestion_academica (anio, periodo, fecha_inicio, fecha_fin, estado)
+        VALUES
+          (2024, 1, '2024-02-01', '2024-06-30', 'CERRADA'),
+          (2024, 2, '2024-08-01', '2024-12-15', 'ABIERTA'),
+          (2025, 1, '2025-02-01', '2025-06-30', 'ABIERTA')
+        ON CONFLICT (anio, periodo) DO NOTHING;
+
         -- 2) Tabla GRUPO (sin FK duras; las añadimos abajo si existen los destinos)
         CREATE TABLE IF NOT EXISTS academia.grupo (
           id_grupo   BIGSERIAL PRIMARY KEY,
@@ -74,15 +92,17 @@ return new class extends Migration
         END
         $$;
 
-        -- 4) Vista de resumen (usa materia, que ya tienes creada)
+        -- 4) Vista de resumen (usa materia + gestión)
         CREATE OR REPLACE VIEW academia.vw_grupo_resumen AS
         SELECT
           g.id_grupo, g.gestion_id, g.materia_id, g.paralelo, g.turno, g.capacidad, g.estado,
+          ga.anio, ga.periodo, ga.fecha_inicio, ga.fecha_fin, ga.estado AS gestion_estado,
           m.codigo AS materia_codigo,
           m.nombre AS materia_nombre,
-          (m.codigo || ' · ' || m.nombre) AS materia_label
+          (m.codigo || ' - ' || m.nombre) AS materia_label
         FROM academia.grupo g
-        JOIN academia.materia m ON m.id_materia = g.materia_id;
+        JOIN academia.materia m ON m.id_materia = g.materia_id
+        LEFT JOIN academia.gestion_academica ga ON ga.id_gestion = g.gestion_id;
         SQL);
     }
 
@@ -91,6 +111,7 @@ return new class extends Migration
         DB::unprepared(<<<'SQL'
         DROP VIEW  IF EXISTS academia.vw_grupo_resumen;
         DROP TABLE IF EXISTS academia.grupo;
+        DROP TABLE IF EXISTS academia.gestion_academica;
         SQL);
     }
 };

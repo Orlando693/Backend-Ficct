@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Carreras\CarreraController;
 use App\Http\Controllers\Api\Bitacora\BitacoraController;
 use App\Http\Controllers\Api\Jefatura\MateriasController;
 use App\Http\Controllers\Api\Jefatura\GruposController;
+use App\Http\Controllers\Api\Jefatura\GestionesController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', LoginController::class);
@@ -66,6 +67,16 @@ Route::prefix('materias')->/*middleware('auth:sanctum')->*/group(function () {
     Route::match(['put','patch'],'/{id}', [MateriasController::class, 'update']); // editar
     Route::patch('/{id}/estado', [MateriasController::class, 'setEstado']);  // activar / inactivar
     Route::delete('/{id}',     [MateriasController::class, 'destroy']);      // eliminar
+});
+
+Route::get('/gestiones', [GestionesController::class, 'index']);
+
+Route::prefix('grupos')->/*middleware('auth:sanctum')->*/group(function () {
+    Route::get('/',              [GruposController::class, 'index']);
+    Route::get('/mini',          [GruposController::class, 'mini']);
+    Route::post('/',             [GruposController::class, 'store']);
+    Route::put('/{id}',          [GruposController::class, 'update']);
+    Route::patch('/{id}/estado', [GruposController::class, 'toggleEstado']);
 });
 Route::middleware(['auth:api', 'bitacora.auto'])->prefix('jefatura')->group(function () {
     Route::get( 'grupos',             [GruposController::class, 'index' ]);
