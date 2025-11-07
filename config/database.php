@@ -103,6 +103,8 @@ return [
             'options' => (extension_loaded('pdo_pgsql') && defined('PDO::PGSQL_ATTR_SSLMODE'))
                 ? [PDO::PGSQL_ATTR_SSLMODE => env('DB_SSLMODE', env('PGSSLMODE', 'require'))]
                 : [],
+            
+            
 
         ],
 

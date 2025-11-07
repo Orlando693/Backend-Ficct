@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Usuarios\UsuarioController;
 use App\Http\Controllers\Api\Reportes\ReporteController;
 use App\Http\Controllers\Api\Carreras\CarreraController;
 use App\Http\Controllers\Api\Bitacora\BitacoraController;
+use App\Http\Controllers\Api\Jefatura\MateriasController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', LoginController::class);
@@ -57,6 +58,13 @@ Route::middleware(['auth:sanctum'])
         Route::delete('/clear',  [BitacoraController::class, 'clearAllFallback']); // fallback para tu front
         Route::delete('/{id}',   [BitacoraController::class, 'destroy']);   // eliminar 1
     });
+Route::prefix('materias')->/*middleware('auth:sanctum')->*/group(function () {
+    Route::get('/',            [MateriasController::class, 'index']);        // lista con filtros + resumen
+    Route::get('/mini',        [MateriasController::class, 'mini']);         // dropdown (id, codigo, nombre, estado)
+    Route::post('/',           [MateriasController::class, 'store']);        // crear
+    Route::match(['put','patch'],'/{id}', [MateriasController::class, 'update']); // editar
+    Route::patch('/{id}/estado', [MateriasController::class, 'setEstado']);  // activar / inactivar
+});
 
 Route::options('/{any}', fn() => response()->noContent())
     ->where('any', '.*');
