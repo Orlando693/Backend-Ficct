@@ -42,4 +42,10 @@ class GruposController extends Controller
     {
         return response()->json($this->srv->toggleEstado($id));
     }
+
+    // DELETE /api/jefatura/grupos/{id}
+    public function destroy(int $id)
+    {
+        return response()->json($this->srv->delete($id));
+    }
 }

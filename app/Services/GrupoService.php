@@ -216,6 +216,47 @@ class GrupoService
         return ['data' => $this->findResumen($id)];
     }
 
+    public function delete(int $id): array
+    {
+        $personaId = optional(Auth::user())->id_persona ?? null;
+
+        return DB::transaction(function () use ($id, $personaId) {
+            $row = DB::selectOne(
+                "SELECT materia_id, gestion_id, paralelo
+                 FROM academia.grupo WHERE id_grupo = ?",
+                [$id]
+            );
+            if (!$row) {
+                abort(404, 'Grupo no encontrado.');
+            }
+
+            $blocked = DB::selectOne(
+                "SELECT CASE
+                    WHEN to_regclass('academia.horario') IS NULL THEN false
+                    ELSE EXISTS(SELECT 1 FROM academia.horario WHERE grupo_id = ?)
+                END AS hay",
+                [$id]
+            );
+            if ($blocked && ($blocked->hay === true || $blocked->hay === 't')) {
+                abort(422, 'No se puede eliminar: tiene horarios asociados.');
+            }
+
+            DB::delete("DELETE FROM academia.grupo WHERE id_grupo = ?", [$id]);
+
+            DB::select(
+                "SELECT academia.fn_log_bitacora(?, 'Jefatura', 'Grupos', 'eliminar', ?, 'OK', ?, ?)",
+                [
+                    $personaId,
+                    "Grupo:$id",
+                    'Eliminar grupo',
+                    json_encode(['id_grupo' => $id], JSON_UNESCAPED_UNICODE),
+                ]
+            );
+
+            return ['message' => 'Grupo eliminado.'];
+        });
+    }
+
     private function findResumen(int $id)
     {
         return DB::table(DB::raw('academia.vw_grupo_resumen'))

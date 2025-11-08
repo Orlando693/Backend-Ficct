@@ -77,6 +77,7 @@ Route::prefix('grupos')->/*middleware('auth:sanctum')->*/group(function () {
     Route::post('/',             [GruposController::class, 'store']);
     Route::put('/{id}',          [GruposController::class, 'update']);
     Route::patch('/{id}/estado', [GruposController::class, 'toggleEstado']);
+    Route::delete('/{id}',       [GruposController::class, 'destroy']);
 });
 Route::middleware(['auth:api', 'bitacora.auto'])->prefix('jefatura')->group(function () {
     Route::get( 'grupos',             [GruposController::class, 'index' ]);
@@ -84,6 +85,7 @@ Route::middleware(['auth:api', 'bitacora.auto'])->prefix('jefatura')->group(func
     Route::post('grupos',             [GruposController::class, 'store' ]);
     Route::put( 'grupos/{id}',        [GruposController::class, 'update']);
     Route::patch('grupos/{id}/estado',[GruposController::class, 'toggleEstado']);
+    Route::delete('grupos/{id}',      [GruposController::class, 'destroy']);
 });
 
 
