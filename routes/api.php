@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Bitacora\BitacoraController;
 use App\Http\Controllers\Api\Jefatura\MateriasController;
 use App\Http\Controllers\Api\Jefatura\GruposController;
 use App\Http\Controllers\Api\Jefatura\GestionesController;
+use App\Http\Controllers\Api\Aulas\AulaController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', LoginController::class);
@@ -86,6 +87,16 @@ Route::middleware(['auth:api', 'bitacora.auto'])->prefix('jefatura')->group(func
     Route::put( 'grupos/{id}',        [GruposController::class, 'update']);
     Route::patch('grupos/{id}/estado',[GruposController::class, 'toggleEstado']);
     Route::delete('grupos/{id}',      [GruposController::class, 'destroy']);
+});
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Si tienes un middleware 'role:CPD,ADMIN', puedes agregarlo aquí o usar el check interno del controller.
+    Route::prefix('aulas')->group(function () {
+        Route::get('/',               [AulaController::class, 'index']);
+        Route::post('/',              [AulaController::class, 'store']);
+        Route::put('/{id}',           [AulaController::class, 'update']);
+        Route::patch('/{id}/estado',  [AulaController::class, 'setEstado']);
+    });
 });
 
 
