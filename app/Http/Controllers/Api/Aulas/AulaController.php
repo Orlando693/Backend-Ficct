@@ -14,28 +14,23 @@ class AulaController extends Controller
 {
     use LogsToBitacora;
 
-    public function __construct()
-    {
-        // Requiere login y rol CPD (puedes añadir ADMIN si quieres permitir ambos)
-        $this->middleware(['auth:sanctum']);
-        // Si ya tienes un middleware 'role', úsalo; sino, validamos adentro.
-        // $this->middleware('role:CPD,ADMIN');
-    }
-
     // GET /api/aulas
     public function index(Request $request)
     {
-        // Fallback de rol si no tienes middleware 'role'
-        $user = $request->user();
-        if (!in_array(strtoupper($user->rol ?? ''), ['CPD','ADMIN'])) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
-
         $q          = trim((string) $request->get('q', ''));
-        $estado     = $request->get('estado'); // ACTIVA/INACTIVA o null
-        $tipo       = $request->get('tipo');   // TEORIA/LABORATORIO o null
-        $edificioId = $request->get('edificio_id'); // opcional
-        $perPage    = (int) ($request->get('per_page', 15));
+        $estado     = $request->get('estado');       // 'activo'|'inactivo'|'ACTIVA'|'INACTIVA'
+        $tipo       = $request->get('tipo');         // 'teoria'|'laboratorio'|'TEORIA'|'LABORATORIO'
+        $edificioId = $request->get('edificio_id');  // opcional
+        $perPage    = (int) ($request->get('per_page', 15)) ?: 15;
+
+        // Normalizar estado
+        if (is_string($estado)) {
+            $estado = strtoupper($estado);
+            if ($estado === 'ACTIVO')   $estado = 'ACTIVA';
+            if ($estado === 'INACTIVO') $estado = 'INACTIVA';
+        }
+        // Normalizar tipo
+        if (is_string($tipo)) $tipo = strtoupper($tipo);
 
         $query = Aula::query()
             ->when($q !== '', fn($qq) =>
@@ -50,7 +45,6 @@ class AulaController extends Controller
 
         $page = $query->paginate($perPage);
 
-        // Log de consulta (no bloqueante)
         $this->logBitacora($request, 'Aulas', 'listar', 'Aula', 'Listado de aulas', [
             'q'=>$q,'estado'=>$estado,'tipo'=>$tipo,'edificio_id'=>$edificioId
         ]);
@@ -67,11 +61,6 @@ class AulaController extends Controller
     // POST /api/aulas
     public function store(StoreAulaRequest $request)
     {
-        $user = $request->user();
-        if (!in_array(strtoupper($user->rol ?? ''), ['CPD','ADMIN'])) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
-
         $aula = Aula::create($request->validated());
 
         $this->logBitacora($request, 'Aulas', 'crear', 'Aula', "Creó aula {$aula->codigo}");
@@ -85,11 +74,6 @@ class AulaController extends Controller
     // PUT /api/aulas/{id}
     public function update(UpdateAulaRequest $request, int $id)
     {
-        $user = $request->user();
-        if (!in_array(strtoupper($user->rol ?? ''), ['CPD','ADMIN'])) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
-
         $aula = Aula::findOrFail($id);
         $aula->update($request->validated());
 
@@ -102,10 +86,12 @@ class AulaController extends Controller
     // PATCH /api/aulas/{id}/estado
     public function setEstado(Request $request, int $id)
     {
-        $user = $request->user();
-        if (!in_array(strtoupper($user->rol ?? ''), ['CPD','ADMIN'])) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
+        // Aceptar 'activo'/'inactivo' y mapear al enum de DB
+        $estado = strtoupper((string) $request->input('estado'));
+        if ($estado === 'ACTIVO')   $estado = 'ACTIVA';
+        if ($estado === 'INACTIVO') $estado = 'INACTIVA';
+
+        $request->merge(['estado' => $estado]);
 
         $request->validate([
             'estado' => ['required','in:ACTIVA,INACTIVA'],

@@ -89,14 +89,12 @@ Route::middleware(['auth:api', 'bitacora.auto'])->prefix('jefatura')->group(func
     Route::delete('grupos/{id}',      [GruposController::class, 'destroy']);
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    // Si tienes un middleware 'role:CPD,ADMIN', puedes agregarlo aquí o usar el check interno del controller.
-    Route::prefix('aulas')->group(function () {
-        Route::get('/',               [AulaController::class, 'index']);
-        Route::post('/',              [AulaController::class, 'store']);
-        Route::put('/{id}',           [AulaController::class, 'update']);
-        Route::patch('/{id}/estado',  [AulaController::class, 'setEstado']);
-    });
+
+Route::prefix('aulas')->/*middleware('auth:sanctum')->*/group(function () {
+    Route::get('/',              [AulaController::class, 'index']);
+    Route::post('/',             [AulaController::class, 'store']);
+    Route::put('/{id}',          [AulaController::class, 'update']);
+    Route::patch('/{id}/estado', [AulaController::class, 'setEstado']);
 });
 
 

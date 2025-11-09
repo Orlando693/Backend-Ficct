@@ -12,13 +12,25 @@ class UpdateAulaRequest extends FormRequest
     }
 
     public function rules(): array {
-        $id = $this->route('id');
+    $id = $this->route('id');
+    return [
+        'codigo'      => ['required','string','max:50', Rule::unique('aulas','codigo')->ignore($id)],
+        'tipo'        => ['required','in:TEORIA,LABORATORIO'],
+        'capacidad'   => ['required','integer','min:1','max:9999'],
+        'edificio_id' => ['nullable','integer'],
+    ];
+}
 
-        return [
-            'codigo'      => ['required','string','max:50', Rule::unique('aulas','codigo')->ignore($id)],
-            'tipo'        => ['required','in:TEORIA,LABORATORIO'],
-            'capacidad'   => ['required','integer','min:1','max:9999'],
-            'edificio_id' => ['nullable','integer'],
-        ];
+protected function prepareForValidation(): void
+{
+    $codigo = $this->input('codigo') ?? $this->input('numero');
+    $tipo   = $this->input('tipo');
+    if (is_string($tipo)) {
+        $tipo = strtoupper($tipo);
     }
+    $this->merge([
+        'codigo' => $codigo,
+        'tipo'   => $tipo,
+    ]);
+}
 }

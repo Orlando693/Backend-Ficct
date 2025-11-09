@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 trait LogsToBitacora
 {
     protected function logBitacora($request, string $modulo, string $accion, string $entidad, string $descripcion = null, array $filtros = []): void
+
     {
         try {
             if (!DB::getSchemaBuilder()->hasTable('bitacora')) return;

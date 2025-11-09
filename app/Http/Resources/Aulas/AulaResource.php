@@ -8,16 +8,18 @@ class AulaResource extends JsonResource
 {
     public function toArray($request): array
     {
-        return [
-            'id'            => $this->id,
-            'codigo'        => $this->codigo,
-            'tipo'          => $this->tipo,
-            'capacidad'     => $this->capacidad,
-            'edificio_id'   => $this->edificio_id,
-            'edificio_label'=> optional($this->edificio)->nombre ?? null,
-            'estado'        => $this->estado,
-            'created_at'    => optional($this->created_at)->toISOString(),
-            'updated_at'    => optional($this->updated_at)->toISOString(),
-        ];
-    }
+    return [
+        'id_aula'  => $this->id,
+        'numero'   => $this->codigo,
+        'tipo'     => is_string($this->tipo) ? strtolower($this->tipo) : $this->tipo,
+        'capacidad'=> $this->capacidad,
+        'piso'     => null, // no mapeas piso en DB; el front lo muestra como '-'
+        'estado'   => match (strtolower((string)$this->estado)) {
+            'activa'   => 'activo',
+            'inactiva' => 'inactivo',
+            default    => 'inactivo',
+        },
+    ];
+}
+
 }

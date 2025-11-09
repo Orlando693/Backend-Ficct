@@ -11,17 +11,24 @@ class StoreAulaRequest extends FormRequest
     }
 
     public function rules(): array {
-        return [
-            'codigo'      => ['required','string','max:50','unique:aulas,codigo'],
-            'tipo'        => ['required','in:TEORIA,LABORATORIO'],
-            'capacidad'   => ['required','integer','min:1','max:9999'],
-            'edificio_id' => ['nullable','integer'],
-        ];
-    }
+    return [
+        'codigo'      => ['required','string','max:50','unique:aulas,codigo'],
+        'tipo'        => ['required','in:TEORIA,LABORATORIO'],
+        'capacidad'   => ['required','integer','min:1','max:9999'],
+        'edificio_id' => ['nullable','integer'],
+    ];
+}
 
-    public function messages(): array {
-        return [
-            'codigo.unique' => 'Ya existe un aula con ese código.',
-        ];
+    protected function prepareForValidation(): void
+    {
+        $codigo = $this->input('codigo') ?? $this->input('numero'); // viene del front
+        $tipo   = $this->input('tipo');
+        if (is_string($tipo)) {
+            $tipo = strtoupper($tipo); // 'teoria' -> 'TEORIA'
+        }
+        $this->merge([
+            'codigo' => $codigo,
+            'tipo'   => $tipo,
+        ]);
     }
 }
