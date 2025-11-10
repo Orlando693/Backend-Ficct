@@ -30,7 +30,7 @@ class AulaController extends Controller
             if ($estado === 'INACTIVO') $estado = 'INACTIVA';
         }
         // Normalizar tipo
-        if (is_string($tipo)) $tipo = strtoupper($tipo);
+        if (is_string($tipo)) $tipo = strtolower($tipo);
 
         $query = Aula::query()
             ->when($q !== '', fn($qq) =>

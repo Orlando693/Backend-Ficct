@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Programacion\DisponibilidadController;
 use App\Http\Controllers\Api\Programacion\AutoController;
 use App\Http\Controllers\Api\Jefatura\ProgramacionController;
 use App\Http\Controllers\Api\AsistenciaDocente\AsistenciaController;
+use App\Http\Controllers\Api\Programacion\HorariosController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', LoginController::class);
@@ -150,6 +151,12 @@ Route::prefix('asistencia-docente')->group(function () {
 Route::prefix('docente')->group(function () {
     Route::get('/sesiones', [AsistenciaController::class, 'sesionesDocente']);
     Route::post('/asistencia', [AsistenciaController::class, 'marcarDocente']);
+});
+Route::prefix('horarios')->/*middleware(['auth:api','bitacora.auto'])*/group(function () {
+    Route::get('/',    [HorariosController::class, 'index']);
+    Route::post('/',   [HorariosController::class, 'store']);
+    Route::put('{id}', [HorariosController::class, 'update']);
+    Route::delete('{id}', [HorariosController::class, 'destroy']);
 });
 
 Route::get('/aulas/disponibles', [DisponibilidadController::class, 'index']);

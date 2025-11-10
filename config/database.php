@@ -85,6 +85,7 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
+            'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'forge'),
@@ -106,6 +107,30 @@ return [
             
             
 
+        ],
+        
+        'academia' => [
+            'driver' => 'pgsql',
+            'url' => env('ACADEMIA_DB_URL', env('DB_URL')),
+            'host' => env('ACADEMIA_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('ACADEMIA_DB_PORT', env('DB_PORT', '5432')),
+            'database' => env('ACADEMIA_DB_DATABASE', env('DB_DATABASE', 'forge')),
+            'username' => env('ACADEMIA_DB_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('ACADEMIA_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'schema' => env('ACADEMIA_DB_SCHEMA', 'academia'),
+            'search_path' => env('ACADEMIA_DB_SEARCH_PATH', env('ACADEMIA_DB_SCHEMA', 'academia')),
+            'sslmode' => env('ACADEMIA_DB_SSLMODE', env('DB_SSLMODE', env('PGSSLMODE', 'prefer'))),
+            'options' => (extension_loaded('pdo_pgsql') && defined('PDO::PGSQL_ATTR_SSLMODE'))
+                ? [
+                    PDO::PGSQL_ATTR_SSLMODE => env(
+                        'ACADEMIA_DB_SSLMODE',
+                        env('DB_SSLMODE', env('PGSSLMODE', 'require'))
+                    ),
+                ]
+                : [],
         ],
 
         'sqlsrv' => [
