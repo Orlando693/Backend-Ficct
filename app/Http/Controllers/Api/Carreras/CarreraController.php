@@ -19,7 +19,7 @@ class CarreraController extends Controller
         }
 
         // ignoramos "with=count" para evitar errores por vistas/relaciones
-        $items = $q->orderBy('nombre', 'asc')->get();
+        $items = $q->orderBy('nombre', 'asc')->get()->map(fn($c) => $this->format($c));
 
         return response()->json(['data' => $items]);
     }
@@ -27,7 +27,7 @@ class CarreraController extends Controller
     // GET /api/carreras/{id}
     public function show($id)
     {
-        return response()->json(Carrera::findOrFail($id));
+        return response()->json(['data' => $this->format(Carrera::findOrFail($id))]);
     }
 
     // POST /api/carreras
@@ -45,7 +45,7 @@ class CarreraController extends Controller
         $data['estado'] = $data['estado'] ?? 'ACTIVA';
 
         $c = Carrera::create($data);
-        return response()->json($c, 201);
+        return response()->json(['data' => $this->format($c)], 201);
     }
 
     // PUT /api/carreras/{id}
@@ -63,7 +63,7 @@ class CarreraController extends Controller
         ]);
 
         $c->update($data);
-        return response()->json($c);
+        return response()->json(['data' => $this->format($c)]);
     }
 
     // PATCH /api/carreras/{id}/estado
@@ -76,6 +76,16 @@ class CarreraController extends Controller
         $c->estado = $data['estado'];
         $c->save();
 
-        return response()->json($c);
+        return response()->json(['data' => $this->format($c)]);
+    }
+
+    private function format(Carrera $c): array
+    {
+        return [
+            'id_carrera' => (int) $c->id,
+            'nombre' => $c->nombre,
+            'sigla' => $c->sigla,
+            'estado' => $c->estado,
+        ];
     }
 }

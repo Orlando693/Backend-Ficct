@@ -14,7 +14,7 @@ class ProgramacionController extends Controller
      */
     public function horariosIndex(Request $r)
     {
-        $r->validate([
+        $data = $r->validate([
             'gestion_id' => ['required','integer','min:1'],
             'grupo_id'   => ['nullable','integer','min:1'],
         ]);
@@ -35,7 +35,19 @@ class ProgramacionController extends Controller
             $q->where('h.grupo_id', $r->integer('grupo_id'));
         }
 
-        return response()->json($q->get());
+        $rows = $q->get()->map(function ($row) {
+            return [
+                'id_horario' => (int) $row->id_horario,
+                'grupo_id'   => (int) $row->grupo_id,
+                'aula_id'    => (int) $row->aula_id,
+                'dia_semana' => (int) $row->dia_semana,
+                'hora_inicio'=> $row->hora_inicio,
+                'hora_fin'   => $row->hora_fin,
+                'aula_label' => $row->aula_label,
+            ];
+        });
+
+        return response()->json(['data' => $rows]);
     }
 
     /**
@@ -79,7 +91,7 @@ class ProgramacionController extends Controller
             // no romper por logger
         }
 
-        return response()->json(['id_horario' => $id], 201);
+        return response()->json(['data' => $this->formatHorario($id)], 201);
     }
 
     /**
@@ -105,6 +117,33 @@ class ProgramacionController extends Controller
             );
         } catch (\Throwable $e) {}
 
-        return response()->noContent();
+        return response()->json(['ok' => true]);
+    }
+
+    private function formatHorario(int $id): array
+    {
+        $row = DB::table('academia.horario AS h')
+            ->leftJoin('academia.aula AS a', 'a.id_aula', '=', 'h.aula_id')
+            ->where('h.id_horario', $id)
+            ->selectRaw("
+                h.id_horario,
+                h.grupo_id,
+                h.aula_id,
+                h.dia_semana,
+                to_char(h.hora_inicio,'HH24:MI') AS hora_inicio,
+                to_char(h.hora_fin,'HH24:MI') AS hora_fin,
+                COALESCE(a.codigo, 'Aula '||a.id_aula) AS aula_label
+            ")
+            ->first();
+
+        return [
+            'id_horario' => (int) $row->id_horario,
+            'grupo_id'   => (int) $row->grupo_id,
+            'aula_id'    => (int) $row->aula_id,
+            'dia_semana' => (int) $row->dia_semana,
+            'hora_inicio'=> $row->hora_inicio,
+            'hora_fin'   => $row->hora_fin,
+            'aula_label' => $row->aula_label,
+        ];
     }
 }

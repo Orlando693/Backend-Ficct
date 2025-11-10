@@ -17,7 +17,10 @@ use App\Http\Controllers\Api\Admin\Parametros\ParametrosController;
 use App\Http\Controllers\Api\Admin\Parametros\GestionesController as ParametrosGestionesController;
 use App\Http\Controllers\Api\Admin\Parametros\PlanController;
 use App\Http\Controllers\Api\Admin\Parametros\ImportOfertaController;
+use App\Http\Controllers\Api\Programacion\DisponibilidadController;
+use App\Http\Controllers\Api\Programacion\AutoController;
 use App\Http\Controllers\Api\Jefatura\ProgramacionController;
+use App\Http\Controllers\Api\AsistenciaDocente\AsistenciaController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', LoginController::class);
@@ -45,16 +48,14 @@ Route::middleware(['auth:sanctum'])
         Route::post('/generar', [ReporteController::class, 'generar']);
     });
 
-Route::middleware(['auth:sanctum']) // si tienes policy, puedes añadir: 'can:manage-careers'
-    ->prefix('carreras')
-    ->group(function () {
-        Route::get('/',        [CarreraController::class, 'index']);       // lista
-        Route::get('/{id}',    [CarreraController::class, 'show']);        // una carrera (opcional)
-        Route::post('/',       [CarreraController::class, 'store']);       // crear
-        Route::put('/{id}',    [CarreraController::class, 'update']);      // editar
-        Route::patch('/{id}/estado', [CarreraController::class, 'setEstado']); // activar/inactivar
-        // Route::delete('/{id}', [CarreraController::class, 'destroy']);   // opcional
-    });
+Route::prefix('carreras')->/*middleware('auth:sanctum')->*/group(function () {
+    Route::get('/',        [CarreraController::class, 'index']);       // lista
+    Route::get('/{id}',    [CarreraController::class, 'show']);        // una carrera (opcional)
+    Route::post('/',       [CarreraController::class, 'store']);       // crear
+    Route::put('/{id}',    [CarreraController::class, 'update']);      // editar
+    Route::patch('/{id}/estado', [CarreraController::class, 'setEstado']); // activar/inactivar
+    // Route::delete('/{id}', [CarreraController::class, 'destroy']);   // opcional
+});
 
 Route::middleware(['auth:sanctum'])
     ->prefix('bitacora')
@@ -125,11 +126,33 @@ Route::prefix('importar/oferta')->group(function () {
     Route::post('/preview', [ImportOfertaController::class, 'preview']);
     Route::post('/confirm', [ImportOfertaController::class, 'confirm']);
 });
-Route::prefix('programacion')/*->middleware(['auth:api','bitacora.auto'])*/->group(function () {
+Route::prefix('programacion')->group(function () {
     Route::get(   '/horarios',            [ProgramacionController::class, 'horariosIndex']);
     Route::post(  '/horarios',            [ProgramacionController::class, 'horariosStore']);
     Route::delete('/horarios/{id}',       [ProgramacionController::class, 'horariosDestroy']);
+    Route::post('/auto/preview',          [AutoController::class, 'preview']);
+    Route::post('/auto/confirm',          [AutoController::class, 'confirm']);
 });
+
+Route::prefix('horarios')->group(function () {
+    Route::get('/',    [ProgramacionController::class, 'horariosIndex']);
+    Route::post('/',   [ProgramacionController::class, 'horariosStore']);
+    Route::delete('/{id}', [ProgramacionController::class, 'horariosDestroy']);
+});
+Route::prefix('asistencia-docente')->group(function () {
+    Route::get('/',                 [AsistenciaController::class, 'index']);   // listar (filtros)
+    Route::post('/',                [AsistenciaController::class, 'store']);   // registrar/chequear entrada
+    Route::put('/{id}',             [AsistenciaController::class, 'update']);  // editar (CPD/ADMIN/DECANATO)
+    Route::patch('/{id}/salida',    [AsistenciaController::class, 'setSalida']); // marcar salida
+    Route::get('/me/hoy',           [AsistenciaController::class, 'meHoy']);   // ver mi registro de hoy (docente)
+});
+
+Route::prefix('docente')->group(function () {
+    Route::get('/sesiones', [AsistenciaController::class, 'sesionesDocente']);
+    Route::post('/asistencia', [AsistenciaController::class, 'marcarDocente']);
+});
+
+Route::get('/aulas/disponibles', [DisponibilidadController::class, 'index']);
 Route::options('/{any}', fn() => response()->noContent())
     ->where('any', '.*');
 
