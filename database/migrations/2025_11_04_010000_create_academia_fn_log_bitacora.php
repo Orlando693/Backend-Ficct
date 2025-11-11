@@ -23,16 +23,30 @@ return new class extends Migration
         RETURNS void
         LANGUAGE plpgsql
         AS $$
+        DECLARE
+          v_col_persona TEXT;
         BEGIN
           IF to_regclass('academia.bitacora') IS NOT NULL THEN
-            BEGIN
-              INSERT INTO academia.bitacora(persona_id, rol, modulo, accion, detalle, estado, payload, extra, created_at)
-              VALUES (p_persona, p_rol, p_modulo, p_accion, p_detalle, p_estado, p_payload, p_extra, now());
-            EXCEPTION WHEN undefined_column THEN
-              INSERT INTO academia.bitacora(persona, rol, modulo, accion, detalle, estado, payload, extra, created_at)
-              VALUES (p_persona, p_rol, p_modulo, p_accion, p_detalle, p_estado, p_payload, p_extra, now());
-            END;
+            SELECT column_name INTO v_col_persona
+            FROM information_schema.columns
+            WHERE table_schema='academia' AND table_name='bitacora'
+              AND column_name IN ('persona_id','persona')
+            ORDER BY CASE column_name WHEN 'persona_id' THEN 1 ELSE 2 END
+            LIMIT 1;
+
+            IF v_col_persona = 'persona_id' THEN
+              EXECUTE format('INSERT INTO academia.bitacora(persona_id, rol, modulo, accion, detalle, estado, payload, extra, created_at)
+                              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())')
+              USING p_persona, p_rol, p_modulo, p_accion, p_detalle, p_estado, p_payload, p_extra;
+            ELSIF v_col_persona = 'persona' THEN
+              EXECUTE format('INSERT INTO academia.bitacora(persona, rol, modulo, accion, detalle, estado, payload, extra, created_at)
+                              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())')
+              USING p_persona, p_rol, p_modulo, p_accion, p_detalle, p_estado, p_payload, p_extra;
+            END IF;
           END IF;
+        EXCEPTION WHEN undefined_column THEN
+          -- swallow silently so app logic keeps working
+          NULL;
         END;
         $$;
         SQL);
