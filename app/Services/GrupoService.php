@@ -107,7 +107,7 @@ class GrupoService
                 [
                     $personaId,
                     "Grupo:$id",
-                    'Crear grupo',
+                    json_encode(['mensaje' => 'Crear grupo'], JSON_UNESCAPED_UNICODE),
                     json_encode($in, JSON_UNESCAPED_UNICODE),
                 ]
             );
@@ -167,7 +167,7 @@ class GrupoService
                 [
                     $personaId,
                     "Grupo:$id",
-                    'Editar grupo',
+                    json_encode(['mensaje' => 'Editar grupo'], JSON_UNESCAPED_UNICODE),
                     json_encode($in, JSON_UNESCAPED_UNICODE),
                 ]
             );
@@ -207,7 +207,7 @@ class GrupoService
                 [
                     $personaId,
                     "Grupo:$id",
-                    "Cambiar estado a $to",
+                    json_encode(['mensaje' => "Cambiar estado a $to"], JSON_UNESCAPED_UNICODE),
                     json_encode(['id_grupo' => $id, 'estado' => $to], JSON_UNESCAPED_UNICODE),
                 ]
             );
@@ -248,7 +248,7 @@ class GrupoService
                 [
                     $personaId,
                     "Grupo:$id",
-                    'Eliminar grupo',
+                    json_encode(['mensaje' => 'Eliminar grupo'], JSON_UNESCAPED_UNICODE),
                     json_encode(['id_grupo' => $id], JSON_UNESCAPED_UNICODE),
                 ]
             );
