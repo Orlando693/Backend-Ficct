@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 
 class MateriaService
 {
@@ -62,9 +63,7 @@ class MateriaService
                 );
 
                 // bitácora (si tienes la función):
-                @DB::select('SELECT academia.fn_log_bitacora(?, ?, ?, ?, ?, ?, ?, ?)', [
-                    null, 'Jefatura', 'Materias', 'crear', 'Materia:'.$input['codigo'], 'OK', null, null
-                ]);
+                $this->logBitacora(null, 'Jefatura', 'Materias', 'crear', 'Materia:'.$input['codigo'], 'OK', null, null);
 
                 return $this->findResumen($row->id_materia);
             });
@@ -91,9 +90,7 @@ class MateriaService
                 );
                 if ($count === 0) abort(404, 'Materia no encontrada.');
 
-                @DB::select('SELECT academia.fn_log_bitacora(?, ?, ?, ?, ?, ?, ?, ?)', [
-                    null, 'Jefatura', 'Materias', 'editar', 'Materia:'.$input['codigo'], 'OK', null, null
-                ]);
+                $this->logBitacora(null, 'Jefatura', 'Materias', 'editar', 'Materia:'.$input['codigo'], 'OK', null, null);
 
                 return $this->findResumen($id);
             });
@@ -123,9 +120,7 @@ class MateriaService
 
             DB::update('UPDATE academia.materia SET estado=? WHERE id_materia=?', [$estado, $id]);
 
-            @DB::select('SELECT academia.fn_log_bitacora(?, ?, ?, ?, ?, ?, ?, ?)', [
-                null, 'Jefatura', 'Materias', 'set_estado', 'Materia:'.$m->codigo, 'OK', json_encode($estado), null
-            ]);
+            $this->logBitacora(null, 'Jefatura', 'Materias', 'set_estado', 'Materia:'.$m->codigo, 'OK', json_encode($estado), null);
 
             return ['data' => $this->findResumen($id)];
         });
@@ -141,9 +136,7 @@ class MateriaService
 
                 DB::delete('DELETE FROM academia.materia WHERE id_materia=?', [$id]);
 
-                @DB::select('SELECT academia.fn_log_bitacora(?, ?, ?, ?, ?, ?, ?, ?)', [
-                    null, 'Jefatura', 'Materias', 'eliminar', 'Materia:'.$m->codigo, 'OK', null, null
-                ]);
+                $this->logBitacora(null, 'Jefatura', 'Materias', 'eliminar', 'Materia:'.$m->codigo, 'OK', null, null);
 
                 return ['message' => 'Materia eliminada.'];
             });
@@ -181,6 +174,21 @@ class MateriaService
                 return 0;
             }
             throw $e;
+        }
+    }
+
+    private function logBitacora($personaId, $rol, $modulo, $accion, $detalle, $estado = null, $payload = null, $extra = null): void
+    {
+        try {
+            DB::select(
+                'SELECT academia.fn_log_bitacora(?, ?, ?, ?, ?, ?, ?, ?)',
+                [$personaId, $rol, $modulo, $accion, $detalle, $estado, $payload, $extra]
+            );
+        } catch (QueryException $e) {
+            if ($e->getCode() !== '42703') {
+                throw $e;
+            }
+            Log::warning('fn_log_bitacora missing columns', ['error' => $e->getMessage()]);
         }
     }
 }
