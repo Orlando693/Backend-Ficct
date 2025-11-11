@@ -103,12 +103,15 @@ class GestionesController extends Controller
 
     private function format($row): array
     {
+        $fechaIni = $row->fecha_ini ?? $row->fecha_inicio ?? null;
+        $fechaFin = $row->fecha_fin ?? $row->fecha_termino ?? null;
+
         return [
             'id_gestion' => (int) $row->id_gestion,
             'anio' => (int) $row->anio,
             'periodo' => (int) $row->periodo,
-            'fecha_ini' => $row->fecha_ini,
-            'fecha_fin' => $row->fecha_fin,
+            'fecha_ini' => $fechaIni,
+            'fecha_fin' => $fechaFin,
             'label' => $row->anio.'-'.$row->periodo,
         ];
     }
