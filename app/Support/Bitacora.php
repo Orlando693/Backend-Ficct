@@ -39,8 +39,12 @@ class Bitacora
                 $descripcion,
                 $payload,
             ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (!in_array($e->getCode(), ['42703', '22P02'])) {
+                throw $e;
+            }
         } catch (\Throwable $e) {
-            // Silencioso por diseño: nunca interrumpir el flujo por la bitácora.
+            // Silencioso: nunca interrumpir el flujo por la bitácora.
         }
     }
 }
