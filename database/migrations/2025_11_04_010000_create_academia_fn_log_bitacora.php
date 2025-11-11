@@ -25,8 +25,13 @@ return new class extends Migration
         AS $$
         BEGIN
           IF to_regclass('academia.bitacora') IS NOT NULL THEN
-            INSERT INTO academia.bitacora(persona_id, rol, modulo, accion, detalle, estado, payload, extra, created_at)
-            VALUES (p_persona, p_rol, p_modulo, p_accion, p_detalle, p_estado, p_payload, p_extra, now());
+            BEGIN
+              INSERT INTO academia.bitacora(persona_id, rol, modulo, accion, detalle, estado, payload, extra, created_at)
+              VALUES (p_persona, p_rol, p_modulo, p_accion, p_detalle, p_estado, p_payload, p_extra, now());
+            EXCEPTION WHEN undefined_column THEN
+              INSERT INTO academia.bitacora(persona, rol, modulo, accion, detalle, estado, payload, extra, created_at)
+              VALUES (p_persona, p_rol, p_modulo, p_accion, p_detalle, p_estado, p_payload, p_extra, now());
+            END;
           END IF;
         END;
         $$;
